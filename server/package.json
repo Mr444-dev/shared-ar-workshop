@@ -1,0 +1,13 @@
+{
+  "name": "shared-ar-workshop-server",
+  "private": true,
+  "version": "0.1.0",
+  "description": "In-memory room relay for the Shared AR Workshop Unity prototype",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js"
+  }
+}

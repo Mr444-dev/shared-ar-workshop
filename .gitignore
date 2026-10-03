@@ -1,0 +1,44 @@
+# Unity generated files
+UnityProject/[Ll]ibrary/
+UnityProject/[Tt]emp/
+UnityProject/[Oo]bj/
+UnityProject/[Bb]uild/
+UnityProject/[Bb]uilds/
+UnityProject/[Ll]ogs/
+UnityProject/[Uu]ser[Ss]ettings/
+UnityProject/MemoryCaptures/
+UnityProject/Recordings/
+
+# IDE and operating system files
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Builds, local env and logs
+*.apk
+*.aab
+*.ipa
+*.log
+.env
+.env.*
+!.env.example
+node_modules/
+npm-debug.log*
+coverage/
+server/data/

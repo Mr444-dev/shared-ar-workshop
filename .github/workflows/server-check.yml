@@ -1,21 +1,42 @@
-name: Server source check
+name: Server and Unity project checks
 
 on:
   push:
     paths:
       - "server/**"
+      - "UnityProject/Packages/**"
+      - "UnityProject/ProjectSettings/ProjectVersion.txt"
       - ".github/workflows/server-check.yml"
   pull_request:
     paths:
       - "server/**"
+      - "UnityProject/Packages/**"
+      - "UnityProject/ProjectSettings/ProjectVersion.txt"
       - ".github/workflows/server-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shared-ar-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  syntax:
+  relay:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm --prefix server run check
+      - name: Install locked server dependencies
+        run: npm --prefix server ci
+      - name: Check server syntax
+        run: npm --prefix server run check
+      - name: Run relay API tests
+        run: npm --prefix server test
+      - name: Audit server dependencies
+        run: npm --prefix server audit --omit=dev --audit-level=high
+      - name: Validate pinned Unity package manifest
+        run: node server/scripts/validate-unity-config.js

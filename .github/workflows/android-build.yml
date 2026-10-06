@@ -3,6 +3,13 @@ name: Android APK (manual)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: shared-ar-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build Android
@@ -20,4 +27,11 @@ jobs:
           unityVersion: 6000.3.0f1
           buildName: SharedARWorkshop
           buildsPath: build
-          allowDirtyBuild: true
+          allowDirtyBuild: false
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-ar-workshop-android
+          path: build/**/*.apk
+          if-no-files-found: error
+          retention-days: 7

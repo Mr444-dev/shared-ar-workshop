@@ -34,12 +34,12 @@ namespace SharedWorkshop.Runtime
             if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
-                SetStatus("URL serwera musi zaczynać się od http:// lub https://.");
+                SetStatus("The server URL must start with http:// or https://.");
                 return;
             }
             if (string.IsNullOrWhiteSpace(roomCode) || string.IsNullOrWhiteSpace(displayName))
             {
-                SetStatus("Wpisz kod pokoju i nazwę użytkownika.");
+                SetStatus("Enter a room code and display name.");
                 return;
             }
 
@@ -65,7 +65,7 @@ namespace SharedWorkshop.Runtime
 
         private IEnumerator JoinRoutine()
         {
-            SetStatus("Łączenie z pokojem " + _roomCode + "…");
+            SetStatus("Connecting to room " + _roomCode + "…");
             var payload = JsonUtility.ToJson(new JoinRequest { displayName = _displayName });
             using (var request = CreatePost("/api/rooms/" + _roomCode + "/join", payload))
             {
@@ -74,19 +74,19 @@ namespace SharedWorkshop.Runtime
                 RecordLatency(started);
                 if (request.result != UnityWebRequest.Result.Success)
                 {
-                    SetStatus("Błąd połączenia: " + request.error);
+                    SetStatus("Connection failed: " + request.error);
                     yield break;
                 }
                 WorkshopJoinResponse response;
                 try { response = JsonUtility.FromJson<WorkshopJoinResponse>(request.downloadHandler.text); }
                 catch (Exception exception)
                 {
-                    SetStatus("Niepoprawna odpowiedź serwera: " + exception.Message);
+                    SetStatus("Invalid server response: " + exception.Message);
                     yield break;
                 }
                 if (response == null || string.IsNullOrEmpty(response.clientId))
                 {
-                    SetStatus("Serwer nie zwrócił identyfikatora uczestnika.");
+                    SetStatus("The server did not return a participant ID.");
                     yield break;
                 }
 
@@ -94,7 +94,7 @@ namespace SharedWorkshop.Runtime
                 _sequence = response.sequence;
                 _connected = true;
                 Joined?.Invoke(response);
-                SetStatus("Połączono · pokój " + _roomCode);
+                SetStatus("Connected · room " + _roomCode);
                 _polling = StartCoroutine(PollRoutine());
                 _pinging = StartCoroutine(PingRoutine());
             }
@@ -115,12 +115,12 @@ namespace SharedWorkshop.Runtime
                         if (request.responseCode == 401 || request.responseCode == 404)
                         {
                             _connected = false;
-                            SetStatus("Sesja pokoju wygasła. Ponowne dołączanie…");
+                            SetStatus("The room session expired. Rejoining…");
                             yield return new WaitForSecondsRealtime(0.5f);
                             yield return JoinRoutine();
                             yield break;
                         }
-                        SetStatus("Ponawiam połączenie… " + request.error);
+                        SetStatus("Retrying the connection… " + request.error);
                         yield return new WaitForSecondsRealtime(backoff);
                         backoff = Mathf.Min(backoff * 1.8f, 5f);
                         continue;
@@ -131,7 +131,7 @@ namespace SharedWorkshop.Runtime
                     try { batch = JsonUtility.FromJson<WorkshopEventBatch>(request.downloadHandler.text); }
                     catch (Exception exception)
                     {
-                        SetStatus("Nie można odczytać zmian: " + exception.Message);
+                        SetStatus("Could not read room changes: " + exception.Message);
                         yield return new WaitForSecondsRealtime(0.5f);
                         continue;
                     }
@@ -185,7 +185,7 @@ namespace SharedWorkshop.Runtime
                 var started = Time.realtimeSinceStartup;
                 yield return request.SendWebRequest();
                 if (request.result == UnityWebRequest.Result.Success) RecordLatency(started);
-                else SetStatus("Nie udało się wysłać zmiany: " + request.error);
+                else SetStatus("Could not send the change: " + request.error);
             }
         }
 

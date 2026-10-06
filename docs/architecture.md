@@ -1,6 +1,6 @@
-# Architektura techniczna
+# Technical Architecture
 
-## Komponenty
+## Components
 
 ```mermaid
 flowchart LR
@@ -12,43 +12,43 @@ flowchart LR
   C -->|camera, IMU, plane tracking stay on device| E[Physical room]
 ```
 
-Klient używa AR Foundation do śledzenia kamery, wykrywania poziomych płaszczyzn i kotwiczenia lokalnej sceny. Serwer nie otrzymuje klatek z kamery ani siatek pomieszczenia. Zapis projektu trafia wyłącznie do `Application.persistentDataPath`; serwer utrzymuje bieżący stan pokoju w pamięci.
+The client uses AR Foundation for camera tracking, horizontal-plane detection, and local scene anchoring. The server does not receive camera frames or room meshes. Project files are saved only under `Application.persistentDataPath`; the server keeps each room's current state in process memory.
 
-## Wspólny układ współrzędnych
+## Shared Coordinate System
 
-ARCore i ARKit prowadzą własne lokalne układy świata, więc wysłanie surowych współrzędnych `Transform.position` z jednego telefonu nie ustawi obiektu poprawnie na drugim. MVP rozwiązuje to podczas kalibracji: każdy uczestnik wskazuje fizycznie ten sam początek na podłodze i drugi punkt określający kierunek osi Z. Klient tworzy `ARAnchor` w początku układu, a pozycje obiektów zapisuje jako lokalne transformacje względem tej kotwicy. Serwer przesyła właśnie te współrzędne lokalne.
+ARCore and ARKit maintain separate local world coordinate systems, so sending a phone's raw `Transform.position` would not place an object correctly on another phone. The MVP handles this through manual alignment: each participant points at the same physical origin on the floor and a second point that defines the forward axis. The client creates an `ARAnchor` at the origin and stores object transforms relative to that anchor. The server relays those local coordinates.
 
-Ta procedura wymaga starannego wskazania tych samych punktów przez uczestników. Nie zapewnia automatycznego zbiegu układów tak dokładnego jak ARCore Cloud Anchors lub współdzielona mapa ARKit; integracja dostawcy kotwic pozostaje kolejnym etapem.
+Participants must identify the same points carefully. This approach does not align devices as accurately or automatically as ARCore Cloud Anchors or a shared ARKit world map. A provider-based shared-anchor workflow remains future work.
 
-## Przepływ zdarzeń
+## Event Flow
 
 ```mermaid
 sequenceDiagram
-  participant A as Telefon A
-  participant S as Serwer pokoju
-  participant B as Telefon B
+  participant A as Device A
+  participant S as Room relay
+  participant B as Device B
   A->>S: POST join(code, name)
   S-->>A: clientId, sequence, snapshot
   B->>S: POST join(code, name)
   S-->>B: clientId, sequence, snapshot
-  A->>A: kalibracja dwóch wspólnych punktów
-  B->>B: kalibracja tych samych dwóch punktów
+  A->>A: align two shared points
+  B->>B: align the same two points
   A->>S: POST upsert(local position, rotation, color)
   S-->>B: long-poll event(seq, object)
-  B->>B: utwórz/aktualizuj klocek pod lokalną kotwicą
+  B->>B: create/update a block under its local anchor
 ```
 
-Każda modyfikacja otrzymuje rosnący numer sekwencji. Klient pobiera zdarzenia long-pollingiem, zaczynając od ostatniej obsłużonej sekwencji. Jeżeli jego kursor wypadnie poza retencję historii, serwer zwraca pełny snapshot. Polling daje prosty transport bez dodatkowych pakietów, ale dodaje obciążenie i opóźnienie w porównaniu z Photon/Netcode.
+Each change receives an increasing sequence number. Clients long-poll from their last processed sequence. If a cursor falls outside the retained event history, the server returns a full snapshot. Polling keeps the transport dependency-free, but adds request overhead and latency compared with a purpose-built networking service such as Photon or Unity Netcode.
 
-## Ograniczenia i ochrona
+## Limits and Security
 
-- Serwer przechowuje maksymalnie 200 obiektów i 32 członków w pokoju, 500 aktywnych pokoi i 4096 zdarzeń na pokój; usuwa pokój po 12 godzinach bez aktywności.
-- Zmieniać stan może każdy, kto zna kod pokoju. Kod działa jako zaproszenie, ale nie zastępuje uwierzytelniania.
-- Serwer weryfikuje format JSON, zakres pozycji i kwaternionu, kolor, limit obiektów, członkostwo oraz 40 operacji na sekundę na uczestnika.
-- Klient ponawia polling z rosnącym odstępem i dołącza ponownie po utracie pokoju. Po restarcie serwera dane pokoju przepadają, bo nie ma bazy danych.
-- Do zdalnego demo wystaw wyłącznie HTTPS. Prototyp nie ma kont, autoryzacji właściciela klocka, TLS po stronie Node ani trwałego storage.
-- Nie umieszczaj sekretów serwera w repozytorium. Kamera i mapowanie AR działają lokalnie; nazwa użytkownika, kod pokoju i transformacje są wysyłane do serwera.
+- The relay caps a room at 200 objects and 32 members, limits the process to 500 rooms and 4,096 retained events per room, and removes rooms after 12 hours without activity.
+- Anyone who knows a room code can edit its state. A code is an invitation, not authentication.
+- The server validates JSON payloads, transform ranges, quaternion magnitude, colors, room membership, object limits, and a per-member limit of 40 operations per second.
+- The client retries polling with backoff and rejoins if its room expires. A server restart clears room state because no database is configured.
+- Use HTTPS for remote demos. The prototype has no accounts, object ownership, server-side TLS termination, or durable storage.
+- Do not commit server secrets. Camera data and AR mapping stay on-device; display names, room codes, and block transforms are sent to the relay.
 
-## Budżet wydajności MVP
+## MVP Performance Budget
 
-Klient pokazuje bieżący FPS, stan sesji AR, sumaryczny czas utraty śledzenia, liczbę klocków i przybliżony RTT żądań. Lokalny limit to 200 klocków, a przycisk fizyki uruchamia maksymalnie osiem symulacji dynamicznych naraz; aktualizacje fizyki są ograniczone do czterech obiektów co 200 ms. Są to ograniczenia prototypu, a nie wyniki pomiarów urządzeń.
+The client displays FPS, AR session state, total tracking-loss time, block count, and approximate request round-trip time. The local limit is 200 blocks. The gravity action enables at most eight dynamic rigidbodies at once; physics updates are limited to four objects every 200 ms. These are prototype limits, not device performance measurements.

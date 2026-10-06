@@ -1,7 +1,0 @@
-{
-  "name": "SharedWorkshop.ProjectBootstrap.Editor",
-  "rootNamespace": "SharedWorkshop.EditorTools",
-  "includePlatforms": ["Editor"],
-  "references": [],
-  "autoReferenced": true
-}

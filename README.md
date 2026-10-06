@@ -1,84 +1,81 @@
-# Współdzielony Warsztat AR
+# Shared AR Workshop
 
-Mobilne MVP do wspólnego układania wirtualnych klocków w jednym fizycznym pomieszczeniu. Projekt jest flagowym pomysłem z briefu portfolio AR/XR: AR Foundation lokalizuje urządzenie i wykrywa podłogę, lokalna kotwica stabilizuje scenę, a lekki serwer HTTP z long-pollingiem rozsyła zmiany w pokoju.
+Shared AR Workshop is a Unity mobile AR prototype for placing and editing virtual blocks in a room with another participant. AR Foundation handles plane detection and local tracking; a small Node.js relay broadcasts room state over HTTP long polling.
 
-## Zakres MVP
+> **Status: prototype; Unity builds and device behavior are not verified yet.** The repository contains the application and relay source, but no generated scene, APK, or iOS build. The Unity Editor is not installed in the current verification environment. Server behavior can be checked independently from the AR client.
 
-- Android z ARCore oraz iOS z ARKit przez AR Foundation.
-- Ręczna kalibracja wspólnego układu odniesienia: obie osoby wskazują ten sam punkt początku i kierunek na podłodze.
-- Wykrywanie poziomej płaszczyzny, kotwica pomieszczenia i umieszczanie klocków na siatce.
-- Współdzielony pokój z kodem, dołączanie wielu użytkowników, tworzenie/aktualizowanie/usuwanie klocków.
-- Kolizje, przełączanie klocków na fizykę dynamiczną, zapis i odczyt projektu jako JSON.
-- Obracanie klocka skokowo o 90° i tryb usuwania przez dotknięcie obiektu.
-- Panel diagnostyczny z FPS, stanem śledzenia, liczbą obiektów i opóźnieniem synchronizacji.
-- Serwer Node.js bez zewnętrznych zależności; stan pokoi pozostaje w pamięci procesu.
+## What is implemented in source
 
-Repo zawiera źródła aplikacji i serwera. W tym środowisku nie ma zainstalowanego Unity Editor, więc nie powstał APK/IPA, a scena nie została zaimportowana ani uruchomiona na urządzeniu. Instrukcja poniżej opisuje pierwsze uruchomienie i konfigurację XR.
+- AR Foundation scene bootstrap for horizontal-plane detection and camera tracking.
+- Manual two-point alignment for approximate shared room coordinates.
+- Grid-snapped block placement, color selection, rotation, deletion, and a limited local-physics demo.
+- Local JSON save/load.
+- Room join, state snapshots, long-poll event delivery, and block upsert/delete endpoints.
+- Request size, room/object/member limits, coordinate validation, per-member operation throttling, and bounded pending long polls on the relay.
 
-## Wymagania
+These are code paths, not a claim that the complete AR flow has been built or verified on a phone. In particular, shared alignment accuracy, reconnect behavior, and two-device synchronization still need a hardware demonstration.
 
-- Unity **6000.3.0f1 (Unity 6.3 LTS)**.
-- Moduł Android Build Support z Android SDK/NDK i OpenJDK do budowania Androida.
-- ARCore‑obsługiwane urządzenie z Androidem albo iPhone/iPad z obsługą ARKit. Budowanie i podpisywanie iOS wymaga macOS i Xcode.
-- Node.js 20 lub nowszy do lokalnego serwera.
-- Dwa urządzenia AR oraz wspólna widoczność tego samego, dobrze oświetlonego pomieszczenia do demonstracji synchronizacji.
+## Requirements
 
-## Uruchomienie serwera
+- Unity **6000.3.0f1**, with Android Build Support, Android SDK/NDK, and OpenJDK for Android builds.
+- An ARCore-supported Android phone. iOS builds require macOS, Xcode, and an ARKit-capable device.
+- Node.js 20 or later for the room relay.
+- Two compatible AR devices in the same well-lit room to demonstrate shared placement.
+
+The Unity project manifest pins the AR Foundation, ARCore, ARKit, XR Plug-in Management, Input System, and uGUI packages. On first open, allow Unity Package Manager to resolve them. The relay's `server/package-lock.json` is committed. Unity's generated `Packages/packages-lock.json` should be committed after a successful Package Manager resolution so subsequent clones use the same transitive package graph.
+
+## Run the room relay
+
+From the repository root:
 
 ```powershell
-node server/server.js --host 0.0.0.0 --port 8787
+node server/server.js --host 127.0.0.1 --port 8787
 ```
 
-Lokalne uruchomienie przydaje się do pracy nad backendem na komputerze. W aplikacji mobilnej używaj URL HTTPS publicznie wystawionego serwera; Android/iOS mogą blokować niezabezpieczone HTTP. Repo ma plik `render.yaml`, który pozwala utworzyć serwis Node z adresem HTTPS. Pokój jest przechowywany tylko w pamięci serwera i znika po restarcie.
+The relay listens on loopback by default and keeps rooms in process memory. Restarting it clears all rooms. For a phone demo, deploy the relay behind HTTPS and enter its HTTPS URL in the app. Do not expose this prototype directly to the public internet: room codes act as the only invitation, there are no user accounts or authorization roles, and state is not persisted.
 
-Serwer nasłuchuje na `127.0.0.1` domyślnie. `0.0.0.0` jest potrzebne wyłącznie do testów z innych urządzeń w LAN. Nie wystawiaj go publicznie po HTTP: do zdalnego demo użyj HTTPS i hosta pod swoją kontrolą.
+For local LAN-only testing, bind to the machine's LAN interface and restrict access with the host firewall. A mobile device must be able to reach the host; do not assume `localhost` on the phone refers to the development computer.
 
-## Uruchomienie Unity
+## Open and configure the Unity project
 
-1. Otwórz folder `UnityProject` w Unity Hub. Przy pierwszym otwarciu skrypt Editor użyje Unity Package Manager API, aby dodać AR Foundation 6.3.1, ARCore XR Plugin 6.3.1, ARKit XR Plugin 6.3.1, Input System oraz uGUI. Nie edytuj ręcznie `Packages/manifest.json`.
-2. W Unity otwórz **Project Settings → XR Plug-in Management**; jeżeli ustawienia targetów nie powstały automatycznie, zainicjalizuj je tam. Następnie wybierz **Tools → Shared Workshop → Configure XR providers**. Kreator włącza **ARCore** dla Androida i **ARKit** dla iOS.
-3. Pierwsza instalacja pakietów automatycznie tworzy startową scenę z wizualizacją wykrytych płaszczyzn. Wybierz **Tools → Shared Workshop → Create starter scene**, aby odtworzyć scenę. Jest zapisywana w `Assets/Scenes/SharedWorkshop.unity` i dodawana do Build Settings.
-4. W Build Settings wybierz Android lub iOS, zbuduj aplikację i uruchom ją na obsługiwanym urządzeniu.
-5. W panelu aplikacji wpisz URL serwera, nazwę użytkownika i kod pokoju. Jedna osoba może wygenerować losowy kod. Pozostali wpisują ten sam kod.
-6. Każdy uczestnik wybiera **Kalibruj**, wskazuje wspólny punkt początku na podłodze, a następnie wskazuje drugi punkt w tym samym kierunku. Po wyrównaniu układu można stawiać klocki.
+1. Open `UnityProject` with Unity 6000.3.0f1 and wait for Package Manager resolution to finish.
+2. Select **Tools → Shared Workshop → Create starter scene**. The generated scene is saved at `Assets/Scenes/SharedWorkshop.unity` and added to Build Settings.
+3. Open **Project Settings → XR Plug-in Management**. Initialize the platform settings if Unity asks, then select **Tools → Shared Workshop → Configure XR providers** to assign ARCore for Android and ARKit for iOS.
+4. Select Android or iOS in Build Profiles, build the app, and run it on an AR-capable device.
+5. Enter the HTTPS relay URL, a display name, and a room code. One participant can generate an eight-character code; the other participant enters the same code.
+6. Each participant selects **Align**, then points at the same physical origin and a second point in the same direction. This is manual alignment, not cloud-anchor or shared-world-map localization.
+7. Place blocks and verify that both devices show the same objects. Record the devices, Unity version, network, lighting, frame rate, tracking loss, and observed sync delay for the portfolio demo.
 
-Do stabilnego śledzenia skanuj szczegółowe powierzchnie przy dobrym świetle. Nie przesyłamy obrazu z kamery ani mapy pomieszczenia. Przez sieć idą wyłącznie kod pokoju, nazwa użytkownika, identyfikatory i transformacje wirtualnych klocków.
+The relay receives room codes, display names, block identifiers, transforms, colors, and physics flags. It does not receive camera frames or room scans.
 
-## API serwera
+## Relay API
 
-| Metoda | Endpoint | Działanie |
-|---|---|---|
-| `GET` | `/health` | Status serwera |
-| `POST` | `/api/rooms/:code/join` | Dołączenie do pokoju i pełny zrzut stanu |
-| `GET` | `/api/rooms/:code/events?since=:seq` | Long-polling zmian od sekwencji `seq` |
-| `POST` | `/api/rooms/:code/objects/upsert` | Utworzenie lub zmiana klocka |
-| `POST` | `/api/rooms/:code/objects/delete` | Usunięcie klocka |
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Process health and in-memory room counts |
+| `POST` | `/api/rooms/:code/join` | Join a room and receive its current object snapshot |
+| `GET` | `/api/rooms/:code/events?clientId=:id&since=:seq` | Long-poll for changes after a sequence cursor |
+| `POST` | `/api/rooms/:code/objects/upsert` | Create or update a block |
+| `POST` | `/api/rooms/:code/objects/delete` | Delete a block |
 
-Serwer waliduje kod pokoju, członkostwo, rozmiary wiadomości, limity współrzędnych, liczbę klocków oraz częstotliwość operacji. Prototyp nie ma kont ani trwałej bazy danych; kody pokoi działają jak zaproszenie. Render kończy HTTPS przed serwisem Node. Przed publicznym użyciem dodaj uwierzytelnianie, trwałe przechowywanie i kontrolę dostępu do pokoi.
+The server validates room codes, room membership tokens, payload sizes, object transforms, object counts, and update rate. The `clientId` returned at join is a bearer token, not account authentication. Anyone who obtains it can act as that room member until the room expires or the server restarts.
 
-## Struktura
+## Verification and known limitations
+
+- `npm run check` checks JavaScript syntax. `npm test` starts the relay on loopback and covers room membership, input limits, event delivery, and duplicate long-poll rejection.
+- The manual Android build workflow requires Unity licensing secrets (`UNITY_LICENSE`, `UNITY_EMAIL`, and `UNITY_PASSWORD`) in GitHub Actions. It has not been run for this repository.
+- No APK/IPA, device recording, performance result, or two-device test result is included.
+- The relay is in-memory and unauthenticated. It is a portfolio prototype, not a production collaboration backend.
+- Dynamic block motion is a small demonstration; remote transforms are relayed as updates rather than using a dedicated authoritative physics simulation.
+- Measured goals such as 30 FPS or sub-250 ms synchronization must not be stated as achieved until recorded on named devices and a specified network.
+
+## Repository layout
 
 ```text
-UnityProject/Assets/SharedWorkshop/Runtime/   # AR, kotwica, klocki, zapis, synchronizacja, HUD
-UnityProject/Assets/Editor/                   # instalator pakietów, kreator sceny, ustawienia XR
-server/server.js                              # API pokoi i long-polling, Node.js core only
-docs/architecture.md                          # decyzje techniczne, współrzędne, bezpieczeństwo
-docs/roadmap.md                               # zakres M0–M12 i pomiary do uzupełnienia
+UnityProject/Assets/SharedWorkshop/Runtime/  # AR interaction, block model, relay client, HUD
+UnityProject/Assets/Editor/WorkshopSetup/    # starter scene and XR provider setup
+UnityProject/Packages/manifest.json          # pinned direct Unity dependencies
+server/server.js                             # dependency-free Node.js room relay
+docs/architecture.md                         # design and coordinate-system notes
+docs/roadmap.md                              # remaining milestones
 ```
-
-## CI
-
-GitHub Actions uruchamia kontrolę składni serwera przy pushu. Osobny ręczny workflow buduje APK; wymaga Unity license w repozytoryjnych sekretach `UNITY_LICENSE`, `UNITY_EMAIL` i `UNITY_PASSWORD`. Workflow nie został uruchomiony w tym środowisku.
-
-## Kryteria demonstracji
-
-- Dwa urządzenia umieszczają klocki w tym samym miejscu po ręcznej kalibracji wspólnego układu.
-- Rozłączenie i ponowne dołączenie do aktywnego pokoju odtwarza jego bieżący stan.
-- Klocki kolidują lokalnie, a ruch dynamicznych klocków aktualizuje się u pozostałych klientów.
-- Mierzone cele: co najmniej 30 FPS na urządzeniu referencyjnym, synchronizacja zwykle poniżej 250 ms w LAN i brak wysyłania obrazu z kamery.
-
-Cele są wymaganiami demonstracyjnymi, nie wynikami pomiarów. Zarejestruj urządzenia, warunki oświetlenia, liczbę obiektów, średni FPS, utratę śledzenia oraz opóźnienie sieci przed publikacją nagrania demo.
-
-## Plan rozwoju
-
-MVP pokrywa wczesne kamienie milowe projektu A. Cloud Anchors/ARWorldMap, trwała baza danych, reconnection queue, obsługa awarii sieci, zaawansowana optymalizacja i pomiary dokładności pozostają kolejnymi zadaniami; szczegóły są w [`docs/roadmap.md`](docs/roadmap.md).

@@ -62,26 +62,26 @@ namespace SharedWorkshop.Runtime
             topLayout.childForceExpandWidth = true;
             topLayout.childForceExpandHeight = false;
 
-            CreateLabel(top, "SHARED WORKSHOP  /  AR", 28, FontStyle.Bold, 44f, Color.white);
-            _serverField = CreateInput(top, "Adres API HTTPS", PlayerPrefs.GetString("SharedWorkshop.Api", ""), 54f);
+            CreateLabel(top, "Shared AR Workshop", 28, FontStyle.Bold, 44f, Color.white);
+            _serverField = CreateInput(top, "HTTPS server URL", PlayerPrefs.GetString("SharedWorkshop.Api", ""), 54f);
 
-            var roomRow = CreateRow(top, "Room row");
-            _roomField = CreateInput(roomRow, "Kod pokoju", PlayerPrefs.GetString("SharedWorkshop.Room", ""), 56f);
+            var roomRow = CreateRow(top, "Room");
+            _roomField = CreateInput(roomRow, "Room code", PlayerPrefs.GetString("SharedWorkshop.Room", ""), 56f);
             _roomField.characterLimit = 12;
             _roomField.contentType = InputField.ContentType.Alphanumeric;
-            var randomButton = CreateButton(roomRow, "LOSOWY KOD", Accent, 19);
+            var randomButton = CreateButton(roomRow, "Random code", Accent, 19);
             randomButton.onClick.AddListener(GenerateRoomCode);
             SetFlexible(randomButton.gameObject, 0.6f);
 
-            _nameField = CreateInput(top, "Nazwa", PlayerPrefs.GetString("SharedWorkshop.Name", "Builder"), 54f);
-            _joinButton = CreateButton(top, "DOŁĄCZ DO POKOJU", Accent, 23);
+            _nameField = CreateInput(top, "Display name", PlayerPrefs.GetString("SharedWorkshop.Name", "Builder"), 54f);
+            _joinButton = CreateButton(top, "Join room", Accent, 23);
             _joinButton.onClick.AddListener(JoinRoom);
 
-            _statusText = CreateLabel(top, "Gotowość AR", 20, FontStyle.Bold, 42f, Color.white);
+            _statusText = CreateLabel(top, "AR status", 20, FontStyle.Bold, 42f, Color.white);
             _diagnosticsText = CreateLabel(top, "", 17, FontStyle.Normal, 42f, new Color(0.76f, 0.83f, 0.87f));
-            CreateLabel(top, "Kamera i skan pokoju zostają na urządzeniu. Wysyłamy tylko transformacje klocków.", 16, FontStyle.Normal, 34f, new Color(0.58f, 0.81f, 0.77f));
+            CreateLabel(top, "Camera images and room scans stay on this device. Only block transforms are sent.", 16, FontStyle.Normal, 34f, new Color(0.58f, 0.81f, 0.77f));
 
-            var bottom = CreatePanel(canvasObject.transform, "Workshop Tools", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 18f), new Vector2(-36f, 360f));
+            var bottom = CreatePanel(canvasObject.transform, "Workshop tools", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 18f), new Vector2(-36f, 360f));
             var bottomLayout = bottom.gameObject.AddComponent<VerticalLayoutGroup>();
             bottomLayout.padding = new RectOffset(12, 12, 12, 12);
             bottomLayout.spacing = 8f;
@@ -91,13 +91,13 @@ namespace SharedWorkshop.Runtime
             bottomLayout.childForceExpandHeight = false;
 
             var actionRow = CreateRow(bottom, "Actions");
-            _alignButton = CreateButton(actionRow, "KALIBRUJ UKŁAD", Accent, 18);
+            _alignButton = CreateButton(actionRow, "Align room", Accent, 18);
             _alignButton.onClick.AddListener(_controller.BeginAlignment);
-            _deleteButton = CreateButton(actionRow, "USUŃ: WYŁ", new Color(0.23f, 0.28f, 0.34f), 18);
+            _deleteButton = CreateButton(actionRow, "Delete: Off", new Color(0.23f, 0.28f, 0.34f), 18);
             _deleteButton.onClick.AddListener(() => { _controller.ToggleDeleteMode(); RefreshButtons(); });
-            _rotateButton = CreateButton(actionRow, "OBRÓT: WYŁ", new Color(0.23f, 0.28f, 0.34f), 18);
+            _rotateButton = CreateButton(actionRow, "Rotate: Off", new Color(0.23f, 0.28f, 0.34f), 18);
             _rotateButton.onClick.AddListener(() => { _controller.ToggleRotateMode(); RefreshButtons(); });
-            var drop = CreateButton(actionRow, "GRAWITACJA", new Color(0.23f, 0.28f, 0.34f), 18);
+            var drop = CreateButton(actionRow, "Gravity", new Color(0.23f, 0.28f, 0.34f), 18);
             drop.onClick.AddListener(_controller.DropAllBlocks);
 
             for (var rowIndex = 0; rowIndex < 2; rowIndex++)
@@ -111,10 +111,10 @@ namespace SharedWorkshop.Runtime
                 }
             }
 
-            var saveRow = CreateRow(bottom, "Save load");
-            var save = CreateButton(saveRow, "ZAPISZ", new Color(0.23f, 0.28f, 0.34f), 18);
+            var saveRow = CreateRow(bottom, "Save and load");
+            var save = CreateButton(saveRow, "Save", new Color(0.23f, 0.28f, 0.34f), 18);
             save.onClick.AddListener(_controller.SaveProject);
-            var load = CreateButton(saveRow, "WCZYTAJ", new Color(0.23f, 0.28f, 0.34f), 18);
+            var load = CreateButton(saveRow, "Load", new Color(0.23f, 0.28f, 0.34f), 18);
             load.onClick.AddListener(_controller.LoadProject);
             RefreshButtons();
         }
@@ -163,8 +163,8 @@ namespace SharedWorkshop.Runtime
         {
             if (_joinButton != null) _joinButton.interactable = !_network.IsConnected;
             if (_alignButton != null) _alignButton.interactable = _network.IsConnected;
-            if (_deleteButton != null) _deleteButton.GetComponentInChildren<Text>().text = _controller.IsDeleteMode ? "USUŃ: WŁ" : "USUŃ: WYŁ";
-            if (_rotateButton != null) _rotateButton.GetComponentInChildren<Text>().text = _controller.IsRotateMode ? "OBRÓT: WŁ" : "OBRÓT: WYŁ";
+            if (_deleteButton != null) _deleteButton.GetComponentInChildren<Text>().text = _controller.IsDeleteMode ? "Delete: On" : "Delete: Off";
+            if (_rotateButton != null) _rotateButton.GetComponentInChildren<Text>().text = _controller.IsRotateMode ? "Rotate: On" : "Rotate: Off";
         }
 
         private static RectTransform CreatePanel(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 position, Vector2 size)

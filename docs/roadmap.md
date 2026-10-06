@@ -1,27 +1,27 @@
-# Zakres względem kamieni milowych M0–M12
+# Milestone Status: M0–M12
 
-Oznaczenia mówią, co znajduje się w repozytorium. Żaden punkt wymagający uruchomienia Unity lub telefonu nie jest przedstawiany jako zweryfikowany.
+The status column describes repository evidence. No Unity or phone-dependent milestone is marked verified without running it on that target.
 
-| Etap | Zakres w projekcie | Stan |
-|---|---|---|
-| M0 | Struktura Unity/serwera, stos AR Foundation i dokumentacja architektury | Kod i konfiguracja przygotowane; Unity nie jest zainstalowane w środowisku |
-| M1 | AR Session, kamera, śledzenie pozycji i detekcja poziomej podłogi | Kreator sceny i kod są w repo; nieuruchomione na urządzeniu |
-| M2 | Kotwica pokoju, ręczna kalibracja dwóch punktów, klocki i siatka 12 cm | Zaimplementowane w źródłach; wymaga weryfikacji w Unity |
-| M3 | Kolizje, grawitacja i statyczna podłoga; limit 8 dynamicznych klocków | Zaimplementowane w źródłach; brak profilu CPU/GPU |
-| M4 | Pokoje, snapshot, sekwencje zmian i synchronizacja przez HTTP long-polling | Serwer i klient są w repo; brak pomiaru dwóch urządzeń |
-| M5 | Wspólne pozycje przez ręcznie powtarzaną kalibrację | Jest prototyp; Cloud Anchors i ARWorldMap pozostają poza MVP |
-| M6 | Wybór koloru, usuwanie, zapis/odczyt JSON po stronie klienta | Zaimplementowane w źródłach; wymaga próby na telefonie |
-| M7 | Ponawianie polling, resynchronizacja snapshotem i ponowne dołączanie | Częściowo: retry i snapshot są; brak kolejki offline i kontrolowanych testów awarii |
-| M8 | HUD z FPS/RTT/tracking, limity pracy i 200-obiektowy limit pokoju | Instrumentacja jest; brak benchmarku, LOD i profilowania urządzeń |
-| M9 | Synchronizacja ruchu fizycznego w ograniczonym zakresie | Prototyp, nie deterministyczna symulacja; brak testu rozjazdu klientów |
-| M10 | Powtarzalne pomiary błędu pozycji, driftu i odzyskiwania trackingu | Do wykonania na urządzeniach z oznaczonymi punktami pomiarowymi |
-| M11 | README, architektura, serwer i workflow CI | Dokumentacja źródła jest; nagranie demo i screenshoty pozostają do wykonania |
-| M12 | Wnioski, KPI z testów i plan rozbudowy | Po zebraniu rzeczywistych wyników |
+| Stage | Scope | Status |
+| --- | --- | --- |
+| M0 | Unity/server structure, AR Foundation stack, and architecture notes | Source and project configuration are present; Unity Editor is not installed in the current environment. |
+| M1 | AR session, camera, pose tracking, and horizontal floor detection | Scene generator and runtime source are present; not run on a device. |
+| M2 | Room anchor, two-point manual alignment, blocks, and 12 cm grid | Implemented in source; requires Unity and device verification. |
+| M3 | Collisions, gravity, static floor, and a limit of eight dynamic blocks | Implemented in source; no CPU/GPU profile is available. |
+| M4 | Rooms, snapshots, event sequences, and HTTP long-poll synchronization | Relay and client source are present; no two-device measurement is available. |
+| M5 | Shared placement through repeated manual alignment | Prototype only; Cloud Anchors and ARWorldMap are outside the MVP. |
+| M6 | Color selection, delete, and local JSON save/load | Implemented in source; requires a phone test. |
+| M7 | Poll retries, snapshot resynchronization, and room rejoin | Partial: retry and snapshots exist; there is no offline change queue or controlled failure test. |
+| M8 | FPS/RTT/tracking HUD and workload limits | Instrumentation is present; no benchmark, LOD, or device profiling. |
+| M9 | Limited synchronization of physics motion | Prototype only, not deterministic simulation; client divergence has not been tested. |
+| M10 | Repeatable position-error, drift, and tracking-recovery measurements | To be completed on devices using marked measurement points. |
+| M11 | README, architecture, relay, and CI workflow | Source documentation is present; demo video and screenshots remain to be captured. |
+| M12 | Conclusions, measured KPIs, and next-step plan | To be completed after real test results are collected. |
 
-## Kolejność następnych prac
+## Next Work
 
-1. Otworzyć projekt w Unity 6.3, poczekać na rozwiązanie pakietów i wygenerowanie sceny, włączyć ARCore/ARKit, a następnie poprawić ewentualne błędy kompilacji w edytorze.
-2. Zbudować Android APK i sprawdzić uprawnienie kamery, tracking oraz działanie kotwicy przy utracie śledzenia.
-3. Wystawić serwer przez HTTPS i wykonać wspólną sesję na dwóch urządzeniach; zmierzyć offset ręcznej kalibracji oraz RTT.
-4. Dodać providera współdzielonych kotwic, trwały storage, testy sieci z opóźnieniem/utratą pakietów oraz automatyczne buildy po skonfigurowaniu licencji Unity.
-5. Zmierzyć FPS/CPU/GPU/pamięć/baterię i wstawić wyłącznie zmierzone wyniki do README oraz nagrania demo.
+1. Open the project in Unity 6.3, resolve the pinned packages, generate the starter scene, configure ARCore/ARKit, and fix any editor compilation errors.
+2. Build an Android APK and verify camera permission, plane tracking, and anchor behavior after tracking loss.
+3. Deploy the relay behind HTTPS and run a shared session on two devices; measure manual-alignment error and round-trip time.
+4. Add a shared-anchor provider, durable storage, network tests with latency and packet loss, and automated builds after configuring a Unity license.
+5. Measure FPS, CPU, GPU, memory, and battery use. Add only measured results to the README and demo recording.

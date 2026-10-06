@@ -11,22 +11,9 @@ using SharedWorkshop.Runtime;
 
 namespace SharedWorkshop.EditorTools
 {
-    [InitializeOnLoad]
     public static class StarterSceneBuilder
     {
         private const string ScenePath = "Assets/Scenes/SharedWorkshop.unity";
-
-        static StarterSceneBuilder()
-        {
-            EditorApplication.delayCall += CreateSceneAfterPackageInstall;
-        }
-
-        private static void CreateSceneAfterPackageInstall()
-        {
-            if (!EditorPrefs.GetBool("SharedWorkshop.CreateStarterSceneAfterInstall", false)) return;
-            EditorPrefs.DeleteKey("SharedWorkshop.CreateStarterSceneAfterInstall");
-            CreateStarterScene();
-        }
 
         [MenuItem("Tools/Shared Workshop/Create starter scene")]
         public static void CreateStarterScene()
@@ -37,7 +24,7 @@ namespace SharedWorkshop.EditorTools
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.portfolio.sharedarworkshop");
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, "com.portfolio.sharedarworkshop");
             PlayerSettings.Android.forceInternetPermission = true;
-            PlayerSettings.iOS.cameraUsageDescription = "Kamera służy do lokalnego śledzenia AR i wykrywania podłogi. Obraz nie jest przesyłany.";
+            PlayerSettings.iOS.cameraUsageDescription = "The camera is used for on-device AR tracking and floor detection. Camera images are not uploaded.";
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
 
             var sessionObject = new GameObject("AR Session");

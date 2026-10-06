@@ -12,9 +12,11 @@ const MAX_ROOMS = 500;
 const MAX_MEMBERS_PER_ROOM = 32;
 const MAX_EVENTS = 4096;
 const MAX_OPS_PER_SECOND = 40;
+const MAX_PENDING_LONG_POLLS = 1024;
 const ROOM_TTL_MS = 12 * 60 * 60 * 1000;
 const LONG_POLL_MS = 20_000;
 const rooms = new Map();
+let pendingLongPolls = 0;
 
 function readStringArg(name, fallback) {
   const index = process.argv.indexOf(name);
@@ -178,28 +180,38 @@ function wakeWaiters(room) {
 
 function finishWaiter(room, waiter, batch) {
   if (!room.waiters.delete(waiter)) return;
+  pendingLongPolls -= 1;
   clearTimeout(waiter.timeout);
   waiter.res.removeListener('close', waiter.onClose);
   if (!waiter.res.writableEnded) json(waiter.res, 200, batch);
 }
 
-function waitForEvents(room, res, since) {
+function waitForEvents(room, res, since, clientId) {
   const immediate = currentEvents(room, since);
   if (immediate.resyncRequired || immediate.events.length) {
     json(res, 200, immediate);
     return;
   }
+  if (pendingLongPolls >= MAX_PENDING_LONG_POLLS) {
+    json(res, 503, { error: 'The server has reached its pending poll limit. Retry shortly.' });
+    return;
+  }
+  if (Array.from(room.waiters).some((waiter) => waiter.clientId === clientId)) {
+    json(res, 429, { error: 'Only one pending event poll is allowed per room member.' });
+    return;
+  }
 
-  const waiter = { res, since, timeout: null, onClose: null };
+  const waiter = { res, since, clientId, timeout: null, onClose: null };
   waiter.onClose = () => {
     clearTimeout(waiter.timeout);
-    room.waiters.delete(waiter);
+    if (room.waiters.delete(waiter)) pendingLongPolls -= 1;
   };
+  room.waiters.add(waiter);
+  pendingLongPolls += 1;
   waiter.timeout = setTimeout(() => {
     finishWaiter(room, waiter, { sequence: room.sequence, resyncRequired: false, objects: [], events: [] });
   }, LONG_POLL_MS);
   res.once('close', waiter.onClose);
-  room.waiters.add(waiter);
 }
 
 function routeRoom(pathname) {
@@ -215,6 +227,7 @@ async function handle(req, res) {
       rooms: rooms.size,
       members: Array.from(rooms.values()).reduce((total, room) => total + room.members.size, 0),
       objects: Array.from(rooms.values()).reduce((total, room) => total + room.objects.size, 0),
+      pendingPolls: pendingLongPolls,
     });
     return;
   }
@@ -279,7 +292,7 @@ async function handle(req, res) {
       badRequest(res, 'Event cursor is invalid.');
       return;
     }
-    waitForEvents(room, res, since);
+    waitForEvents(room, res, since, clientId);
     return;
   }
 

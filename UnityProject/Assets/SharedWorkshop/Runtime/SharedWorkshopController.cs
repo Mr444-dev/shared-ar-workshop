@@ -46,7 +46,7 @@ namespace SharedWorkshop.Runtime
         private float _trackingLossSeconds;
         private float _nextDynamicSync;
         private int _dynamicCursor;
-        private string _status = "Skieruj kamerę na dobrze oświetloną podłogę.";
+        private string _status = "Point the camera at a well-lit floor.";
 
         public bool IsAligned { get { return _roomAnchor != null; } }
         public bool IsDeleteMode { get { return _deleteMode; } }
@@ -117,7 +117,7 @@ namespace SharedWorkshop.Runtime
             if (_raycastManager == null || _planeManager == null || Camera.main == null) return;
             if (!TryGetFloorHit(screenPosition, out var hit, out var plane))
             {
-                if (_alignmentStep > 0) SetStatus("Nie wykryto podłogi. Przesuń kamerę, aż płaszczyzna AR będzie widoczna.");
+                if (_alignmentStep > 0) SetStatus("No floor detected. Move the camera until an AR plane is visible.");
                 return;
             }
 
@@ -126,7 +126,7 @@ namespace SharedWorkshop.Runtime
                 _alignmentOrigin = hit.pose.position;
                 _alignmentUp = plane.transform.up.normalized;
                 _alignmentStep = 2;
-                SetStatus("Punkt początku ustawiony. Wskaż drugi punkt w wybranym kierunku, co najmniej 25 cm dalej.");
+                SetStatus("Origin set. Point to a second point in the chosen direction at least 25 cm away.");
                 return;
             }
 
@@ -135,7 +135,7 @@ namespace SharedWorkshop.Runtime
                 var axis = Vector3.ProjectOnPlane(hit.pose.position - _alignmentOrigin, _alignmentUp);
                 if (axis.magnitude < 0.25f)
                 {
-                    SetStatus("Drugi punkt musi leżeć co najmniej 25 cm od początku.");
+                    SetStatus("The second point must be at least 25 cm from the origin.");
                     return;
                 }
                 CompleteAlignment(axis.normalized);
@@ -144,7 +144,7 @@ namespace SharedWorkshop.Runtime
 
             if (!IsAligned)
             {
-                SetStatus("Najpierw połącz się z pokojem i skalibruj wspólny układ.");
+                SetStatus("Join a room and align the shared coordinate system first.");
                 return;
             }
 
@@ -181,11 +181,11 @@ namespace SharedWorkshop.Runtime
         {
             if (_network == null || !_network.IsConnected)
             {
-                SetStatus("Połącz się z pokojem przed kalibracją.");
+                SetStatus("Join a room before aligning the space.");
                 return;
             }
             _alignmentStep = 1;
-            SetStatus("Wskaż wspólny punkt początku na podłodze. Każde urządzenie musi wskazać to samo miejsce.");
+            SetStatus("Point to a shared origin on the floor. Every device must use the same physical point.");
         }
 
         private void CompleteAlignment(Vector3 forward)
@@ -212,14 +212,14 @@ namespace SharedWorkshop.Runtime
             _pendingSnapshot = Array.Empty<WorkshopObjectState>();
             foreach (var state in allStates.Values) CreateBlock(state, false);
             foreach (var state in localStates) _network.PublishUpsert(state);
-            SetStatus("Układ skalibrowany. Uczestnicy muszą wskazać ten sam początek i kierunek.");
+            SetStatus("Alignment complete. Every participant must use the same origin and direction.");
         }
 
         private void PlaceBlock(Vector3 worldPosition)
         {
             if (_blocks.Count >= MaxBlocks)
             {
-                SetStatus("Osiągnięto limit 200 klocków w tym urządzeniu.");
+                SetStatus("The 200-block limit has been reached on this device.");
                 return;
             }
             var local = _roomAnchor.transform.InverseTransformPoint(worldPosition);
@@ -267,14 +267,14 @@ namespace SharedWorkshop.Runtime
         {
             _deleteMode = !_deleteMode;
             if (_deleteMode) _rotateMode = false;
-            SetStatus(_deleteMode ? "Tryb usuwania: dotknij klocek." : "Tryb stawiania klocków.");
+            SetStatus(_deleteMode ? "Delete mode: tap a block." : "Placement mode.");
         }
 
         public void ToggleRotateMode()
         {
             _rotateMode = !_rotateMode;
             if (_rotateMode) _deleteMode = false;
-            SetStatus(_rotateMode ? "Tryb obracania: dotknij klocek, aby obrócić go o 90°." : "Tryb stawiania klocków.");
+            SetStatus(_rotateMode ? "Rotate mode: tap a block to rotate it by 90 degrees." : "Placement mode.");
         }
 
         public void DropAllBlocks()
@@ -291,14 +291,14 @@ namespace SharedWorkshop.Runtime
                     _network.PublishUpsert(CaptureState(block));
                 }
             }
-            SetStatus("Grawitacja dla " + activated + " klocków. Limit fizyki sieciowej w MVP: " + MaxDynamicBlocks + ".");
+            SetStatus("Gravity enabled for " + activated + " blocks. The MVP network-physics limit is " + MaxDynamicBlocks + ".");
         }
 
         public void SaveProject()
         {
             if (!IsAligned)
             {
-                SetStatus("Najpierw skalibruj układ pomieszczenia.");
+                SetStatus("Align the room before saving a project.");
                 return;
             }
             var save = new WorkshopSaveFile
@@ -312,7 +312,7 @@ namespace SharedWorkshop.Runtime
                 File.WriteAllText(path, JsonUtility.ToJson(save, true));
                 SetStatus("Zapisano projekt lokalnie: " + Path.GetFileName(path));
             }
-            catch (Exception exception) { SetStatus("Nie udało się zapisać: " + exception.Message); }
+            catch (Exception exception) { SetStatus("Could not save the project: " + exception.Message); }
         }
 
         public void LoadProject()
@@ -327,13 +327,13 @@ namespace SharedWorkshop.Runtime
             {
                 if (new FileInfo(path).Length > 512 * 1024)
                 {
-                    SetStatus("Plik projektu przekracza limit 512 KB.");
+                    SetStatus("The project file exceeds the 512 KB limit.");
                     return;
                 }
                 var save = JsonUtility.FromJson<WorkshopSaveFile>(File.ReadAllText(path));
                 if (save == null || save.version != 1 || save.objects == null || save.objects.Length > MaxBlocks || save.objects.Any(state => !ValidState(state)))
                 {
-                    SetStatus("Plik projektu ma nieobsługiwany lub niepoprawny format.");
+                    SetStatus("The project file has an unsupported or invalid format.");
                     return;
                 }
                 foreach (var id in _blocks.Keys.ToArray())
@@ -345,9 +345,9 @@ namespace SharedWorkshop.Runtime
                 {
                     if (CreateBlock(state, false) != null) _network.PublishUpsert(state);
                 }
-                SetStatus("Wczytano projekt lokalny i wysłano zmiany do pokoju.");
+                SetStatus("Loaded the local project and sent its changes to the room.");
             }
-            catch (Exception exception) { SetStatus("Nie udało się wczytać projektu: " + exception.Message); }
+            catch (Exception exception) { SetStatus("Could not load the project: " + exception.Message); }
         }
 
         private WorkshopBlock CreateBlock(WorkshopObjectState state, bool remote)
@@ -481,7 +481,7 @@ namespace SharedWorkshop.Runtime
             var tracking = ARSession.state.ToString();
             var latency = _network != null && _network.LatencyMilliseconds >= 0 ? _network.LatencyMilliseconds + " ms" : "—";
             var planes = _planeManager == null ? 0 : _planeManager.trackables.Count();
-            return string.Format("{0:0} FPS  ·  śledzenie: {1}  ·  płaszczyzny: {2}  ·  obiekty: {3}  ·  ping: {4}  ·  utrata śledzenia: {5:0.0}s",
+            return string.Format("{0:0} FPS  ·  tracking: {1}  ·  planes: {2}  ·  blocks: {3}  ·  RTT: {4}  ·  tracking lost: {5:0.0}s",
                 _fps, tracking, planes, _blocks.Count, latency, _trackingLossSeconds);
         }
     }

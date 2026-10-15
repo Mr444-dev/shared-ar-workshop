@@ -1,11 +1,19 @@
-# Shared AR Workshop
-![Unity](https://img.shields.io/badge/Unity-000000?logo=unity&logoColor=white) ![AR Foundation](https://img.shields.io/badge/AR%20Foundation-2D2D2D) ![MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+<p align="center">
+  <img src="docs/assets/portfolio-mark.svg" alt="Shared AR Workshop logo" width="96" height="96">
+</p>
+
+<h1 align="center">Shared AR Workshop</h1>
+
+<p align="center"><strong>A Unity AR prototype for collaborative in-room object placement through a local relay.</strong></p>
+
+<p align="center"><img src="https://img.shields.io/badge/Unity-000000?logo=unity&amp;logoColor=white" alt="Unity"> <img src="https://img.shields.io/badge/AR%20Foundation-2D2D2D" alt="AR Foundation"> <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></p>
 
 Shared AR Workshop is a Unity mobile AR prototype for placing and editing virtual blocks in a room with another participant. AR Foundation handles plane detection and local tracking; a small Node.js relay broadcasts room state over HTTP long polling.
 
 > **Status: prototype; Unity builds and device behavior are not verified yet.** The repository contains the application and relay source, but no generated scene, APK, or iOS build. The Unity Editor is not installed in the current verification environment. Server behavior can be checked independently from the AR client.
 
-[Run the relay](#run-the-room-relay) · [Verification](#verification-and-known-limitations) · [License](#license)
+<p align="center"><a href="#run-the-room-relay">Run the relay</a> &nbsp;·&nbsp; <a href="#verification-and-known-limitations">Verification</a> &nbsp;·&nbsp; <a href="#license">License</a></p>
+
 ## What is implemented in source
 
 - AR Foundation scene bootstrap for horizontal-plane detection and camera tracking.

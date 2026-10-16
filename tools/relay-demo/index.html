@@ -46,6 +46,8 @@
     .run-button:disabled { cursor: wait; opacity: .65; transform: none; }
     .warning { display: flex; gap: 11px; align-items: flex-start; padding: 12px 14px; border: 1px solid #71532a; border-radius: 10px; background: #4c35181f; color: #e8c99d; font-size: 11px; line-height: 1.55; }
     .warning strong { display: block; margin-bottom: 2px; color: #ffd28f; font-size: 11px; }
+    .warning.legacy { border-color: #a44337; background: #54241e33; color: #f3c0ad; }
+    .warning.legacy strong { color: #ffac91; }
     .warning-icon { flex: 0 0 18px; width: 18px; height: 18px; display: grid; place-items: center; margin-top: 1px; border: 1px solid #c89042; border-radius: 50%; font-size: 11px; }
     .workspace { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(270px, .78fr); gap: 15px; margin-top: 15px; }
     .card { border: 1px solid var(--line); border-radius: 13px; background: linear-gradient(145deg, #141f2a, #101821); box-shadow: 0 12px 38px #00000020; }
@@ -137,7 +139,7 @@
 
     <aside class="warning" aria-label="Demo scope">
       <span class="warning-icon" aria-hidden="true">i</span>
-      <div><strong>Relay demonstration only</strong>This browser harness exercises the real Node.js room API. The cube is a UI representation of relay data; it does not run Unity, camera tracking, plane detection, or AR rendering.</div>
+      <div><strong id="scope-title">Relay demonstration only</strong><span id="scope-copy">This browser harness exercises the real Node.js room API. The cube is a UI representation of relay data; it does not run Unity, camera tracking, plane detection, or AR rendering.</span></div>
     </aside>
 
     <section class="workspace" aria-label="Two participant relay demonstration">
@@ -172,7 +174,7 @@
           <div class="progress" aria-label="Demo progress"><span></span><span></span><span></span><span></span><span></span></div>
         </section>
         <section class="card event-card" aria-labelledby="events-title">
-          <div class="card-head"><div class="card-title" id="events-title">Relay activity</div><div class="connection">HTTP · LOOPBACK</div></div>
+          <div class="card-head"><div class="card-title" id="events-title">Relay activity</div><div class="connection" id="api-mode">MODE · DETECTED ON JOIN</div></div>
           <div class="event-list" id="event-list" aria-live="polite"><div class="event-placeholder">No requests yet. Start the guided flow to inspect real API responses and sequence numbers.</div></div>
         </section>
       </div>
@@ -194,6 +196,7 @@
     const eventList = document.querySelector('#event-list');
     let stepIndex = 0;
     let busy = false;
+    let relayMode = null;
 
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     const pointer = document.querySelector('#guide-pointer');
@@ -280,7 +283,10 @@
     }
     function applyEvent(name, event) {
       const client = clients[name];
-      if (event.kind === 'upsert' && event.object) client.objects.set(event.object.id, event.object);
+      if (event.kind === 'upsert' && event.object) {
+        const ownerClientId = event.object.ownerClientId || event.ownerClientId || event.clientId || null;
+        client.objects.set(event.object.id, { ...event.object, ownerClientId });
+      }
       if (event.kind === 'delete' && event.objectId) client.objects.delete(event.objectId);
       client.session.sequence = Math.max(client.session.sequence, event.sequence || 0);
       drawClient(name);
@@ -308,6 +314,20 @@
         body: JSON.stringify({ displayName: name }),
       });
       if (!result.response.ok) throw new Error(`Join failed: ${result.body.error || result.response.status}`);
+      const detectedMode = typeof result.body.accessToken === 'string' && result.body.accessToken.length > 0 ? 'bearer' : 'legacy';
+      if (relayMode && relayMode !== detectedMode) throw new Error('Relay protocol changed during the demo.');
+      relayMode = detectedMode;
+      const modeNode = document.querySelector('#api-mode');
+      if (relayMode === 'legacy') {
+        modeNode.textContent = 'LEGACY · CLIENT ID';
+        modeNode.style.color = 'var(--amber)';
+        document.querySelector('.warning').classList.add('legacy');
+        document.querySelector('#scope-title').textContent = 'Legacy relay · loopback only';
+        document.querySelector('#scope-copy').textContent = 'This published API treats a caller-supplied clientId as room membership; it is not authentication. Keep this prototype on loopback and do not expose it to the internet. The cube is browser UI, not AR.';
+      } else {
+        modeNode.textContent = 'BEARER TOKEN';
+        modeNode.style.color = 'var(--green)';
+      }
       clients[name].session = { ...result.body };
       clients[name].objects = new Map(result.body.objects.map((object) => [object.id, object]));
       setClientState(name, 'CONNECTED', true);
@@ -317,10 +337,12 @@
     }
     async function publish(name, object) {
       const client = clients[name];
+      const headers = { 'content-type': 'application/json' };
+      const payload = { object };
+      if (client.session.accessToken) headers.authorization = `Bearer ${client.session.accessToken}`;
+      else payload.clientId = client.session.clientId;
       const result = await api(`/api/rooms/${client.session.roomCode}/objects/upsert`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${client.session.accessToken}` },
-        body: JSON.stringify({ object }),
+        method: 'POST', headers, body: JSON.stringify(payload),
       });
       if (!result.response.ok) throw new Error(`Object update failed: ${result.body.error || result.response.status}`);
       client.session.sequence = result.body.sequence;
@@ -331,9 +353,11 @@
     }
     async function receive(name) {
       const client = clients[name];
-      const result = await api(`/api/rooms/${client.session.roomCode}/events?since=${client.session.sequence}`, {
-        headers: { authorization: `Bearer ${client.session.accessToken}` },
-      });
+      const query = new URLSearchParams({ since: String(client.session.sequence) });
+      const headers = {};
+      if (client.session.accessToken) headers.authorization = `Bearer ${client.session.accessToken}`;
+      else query.set('clientId', client.session.clientId);
+      const result = await api(`/api/rooms/${client.session.roomCode}/events?${query}`, { headers });
       if (!result.response.ok) throw new Error(`Event poll failed: ${result.body.error || result.response.status}`);
       result.body.events.forEach((event) => applyEvent(name, event));
       if (result.body.resyncRequired) {
@@ -365,6 +389,12 @@
       document.querySelector('#flow-state').classList.remove('error');
       eventList.replaceChildren();
       stepIndex = 0;
+      relayMode = null;
+      document.querySelector('#api-mode').textContent = 'MODE · DETECTED ON JOIN';
+      document.querySelector('#api-mode').style.color = '';
+      document.querySelector('.warning').classList.remove('legacy');
+      document.querySelector('#scope-title').textContent = 'Relay demonstration only';
+      document.querySelector('#scope-copy').textContent = 'This browser harness exercises the real Node.js room API. The cube is a UI representation of relay data; it does not run Unity, camera tracking, plane detection, or AR rendering.';
       Object.values(clients).forEach((client) => {
         client.objects.clear(); client.session = null; drawClient(Object.keys(clients).find((name) => clients[name] === client));
       });
@@ -378,7 +408,7 @@
         aimAt('#event-list', 0.5, 0.45);
         await sleep(1400);
 
-        setStep('Join the same room', 'Two independent bearer tokens join a fresh room and receive separate snapshots.');
+        setStep('Join the same room', 'Both participants join a fresh room and receive independent snapshots. The harness detects the relay protocol from the join response.');
         const suffix = crypto.getRandomValues(new Uint32Array(1))[0].toString(36).toUpperCase().padStart(6, '0').slice(-6);
         const roomCode = `AR${suffix}`;
         document.querySelector('#room-code').textContent = `ROOM · ${roomCode}`;

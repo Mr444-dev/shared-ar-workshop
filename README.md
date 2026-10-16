@@ -10,9 +10,9 @@
 
 Shared AR Workshop is a Unity mobile AR prototype for placing and editing virtual blocks in a room with another participant. AR Foundation handles plane detection and local tracking; a small Node.js relay broadcasts room state over HTTP long polling.
 
-> **Status: prototype; Unity builds and device behavior are not verified yet.** The repository contains the application and relay source, but no generated scene, APK, or iOS build. The Unity Editor is not installed in the current verification environment. Server behavior can be checked independently from the AR client.
+> **Status: prototype; Unity builds and device behavior are not verified yet.** The repository contains the application and relay source, but no generated scene, APK, or iOS build. This environment has Unity `6000.6.3f1`, while the project requires `6000.3.0f1`; no Unity build or device run is claimed. Server behavior can be checked independently from the AR client.
 
-<p align="center"><a href="#run-the-room-relay">Run the relay</a> &nbsp;·&nbsp; <a href="#verification-and-known-limitations">Verification</a> &nbsp;·&nbsp; <a href="#license">License</a></p>
+<p align="center"><a href="#browser-relay-walkthrough">Relay walkthrough</a> &nbsp;·&nbsp; <a href="#run-the-room-relay">Run the relay</a> &nbsp;·&nbsp; <a href="#verification-and-known-limitations">Verification</a> &nbsp;·&nbsp; <a href="#license">License</a></p>
 
 ## What is implemented in source
 
@@ -37,6 +37,24 @@ These are code paths, not a claim that the complete AR flow has been built or ve
 - Two compatible AR devices in the same well-lit room to demonstrate shared placement.
 
 The Unity project manifest pins the AR Foundation, ARCore, ARKit, XR Plug-in Management, Input System, and uGUI packages. On first open, allow Unity Package Manager to resolve them. The relay's `server/package-lock.json` is committed. Unity's generated `Packages/packages-lock.json` should be committed after a successful Package Manager resolution so subsequent clones use the same transitive package graph.
+
+## Browser relay walkthrough
+
+The repository includes a small, dependency-free browser harness for exercising the room relay without opening Unity, Docker, or an Android emulator. It creates two independent room members, publishes a block update, receives it through the event endpoint, sends an edit from the peer, and verifies that both browser-side snapshots converge at the same sequence.
+
+From the repository root, run:
+
+```sh
+node tools/relay-demo/host.mjs
+```
+
+Open the loopback URL printed in the terminal and select **Run guided relay demo**. The harness starts the Node relay and its local web page on temporary loopback ports. Press `Ctrl+C` in the terminal to stop both processes; the relay keeps room state in memory, so stopping it clears the demo data.
+
+The 24-second walkthrough below is assembled from live browser captures with a visible guide pointer. It demonstrates the relay requests and their results; it is not a continuous recording of the Unity app or an AR-device session.
+
+<p align="center"><a href="docs/media/shared-ar-relay-demo.mp4"><img src="docs/media/shared-ar-relay-demo.gif" alt="Two browser clients exchanging a block update through the Shared AR Workshop relay" width="900"></a></p>
+
+This is a demonstration of the relay API and a browser test harness. Its cube is a visual representation of API data; it does not run the Unity client, AR Foundation, camera tracking, plane detection, or device-to-device AR. A device demo still requires a build from the required Unity version and two compatible AR devices.
 
 ## Run the room relay
 
@@ -96,8 +114,10 @@ UnityProject/Assets/SharedWorkshop/Runtime/  # AR interaction, block model, rela
 UnityProject/Assets/Editor/WorkshopSetup/    # starter scene and XR provider setup
 UnityProject/Packages/manifest.json          # pinned direct Unity dependencies
 server/server.js                             # dependency-free Node.js room relay
+tools/relay-demo/                            # loopback browser harness for the relay API
 docs/architecture.md                         # design and coordinate-system notes
 docs/roadmap.md                              # remaining milestones
+docs/media/                                  # relay walkthrough video and screenshots
 ```
 
 ## License

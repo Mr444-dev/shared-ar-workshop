@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Shared AR Workshop — Relay Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1118;
+      --panel: #111a24;
+      --panel-raised: #172330;
+      --line: #263646;
+      --muted: #94a5b8;
+      --text: #e9f1f8;
+      --blue: #66d5ee;
+      --green: #75d8ad;
+      --amber: #ffc36d;
+      --red: #ff8f8f;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(ellipse at 50% -20%, #1d3446 0, transparent 45%), var(--bg);
+      color: var(--text);
+    }
+    button { font: inherit; }
+    .shell { width: min(1280px, calc(100% - 48px)); margin: 0 auto; padding: 24px 0 30px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+    .mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; color: #07151d; background: linear-gradient(145deg, #8cf0fc, #4db1d6); font-weight: 850; font-size: 17px; box-shadow: 0 0 28px #59cce72a; }
+    .brand-title { font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
+    .brand-subtitle { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .environment { color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .env-dot, .state-dot { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px #75d8ad80; vertical-align: 1px; }
+    .hero { display: flex; align-items: end; justify-content: space-between; gap: 28px; padding: 27px 0 22px; }
+    .eyebrow { color: var(--blue); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .15em; text-transform: uppercase; }
+    h1 { margin: 8px 0 7px; font-size: clamp(26px, 3vw, 36px); letter-spacing: -.045em; line-height: 1.05; }
+    .lead { max-width: 680px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .run-button { flex: 0 0 auto; min-height: 46px; border: 1px solid #86e7fa6b; border-radius: 11px; padding: 0 18px; color: #06141c; background: linear-gradient(135deg, #84ebf8, #58c1e1); font-size: 13px; font-weight: 750; cursor: pointer; box-shadow: 0 8px 24px #52c4e320; transition: transform .16s ease, filter .16s ease; }
+    .run-button:hover { transform: translateY(-1px); filter: brightness(1.07); }
+    .run-button:focus-visible, .secondary:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+    .run-button:disabled { cursor: wait; opacity: .65; transform: none; }
+    .warning { display: flex; gap: 11px; align-items: flex-start; padding: 12px 14px; border: 1px solid #71532a; border-radius: 10px; background: #4c35181f; color: #e8c99d; font-size: 11px; line-height: 1.55; }
+    .warning strong { display: block; margin-bottom: 2px; color: #ffd28f; font-size: 11px; }
+    .warning-icon { flex: 0 0 18px; width: 18px; height: 18px; display: grid; place-items: center; margin-top: 1px; border: 1px solid #c89042; border-radius: 50%; font-size: 11px; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(270px, .78fr); gap: 15px; margin-top: 15px; }
+    .card { border: 1px solid var(--line); border-radius: 13px; background: linear-gradient(145deg, #141f2a, #101821); box-shadow: 0 12px 38px #00000020; }
+    .card-head { min-height: 51px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+    .card-title { color: #d5e0e9; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .room-code { color: var(--blue); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .room-stage { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 13px; padding: 15px; overflow: hidden; }
+    .participant { min-width: 0; border: 1px solid #2c3a48; border-radius: 11px; overflow: hidden; background: #101923; transition: border-color .25s ease, box-shadow .25s ease; }
+    .participant.synced { border-color: #5dbb9b; box-shadow: inset 0 0 0 1px #5dbb9b35, 0 0 24px #62d4ae12; }
+    .participant-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #283646; }
+    .person { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 680; }
+    .avatar { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid #3c586b; border-radius: 8px; color: #9de2f0; background: #1b303c; font-size: 10px; font-weight: 750; }
+    .connection { color: #8093a5; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .view { position: relative; height: 245px; overflow: hidden; background: linear-gradient(180deg, #142432 0%, #1b3344 53%, #21323b 54%, #17242d 100%); }
+    .view::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, #64a7bd1c 0, transparent 60%); }
+    .horizon { position: absolute; inset: 54% 0 auto; height: 1px; background: #94d6df34; }
+    .grid { position: absolute; left: -40%; right: -40%; top: 53%; height: 160%; transform: perspective(220px) rotateX(62deg); transform-origin: top center; opacity: .35; background-image: linear-gradient(#79aab51d 1px, transparent 1px), linear-gradient(90deg,#79aab51d 1px,transparent 1px); background-size: 30px 30px; }
+    .view-label { position: absolute; top: 12px; left: 12px; z-index: 2; color: #c1d0dc; font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; }
+    .cube { position: absolute; z-index: 3; width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--cube-color), white 52%); border-radius: 5px; color: #08141c; background: color-mix(in srgb, var(--cube-color), transparent 18%); box-shadow: 8px 12px 20px #0006, inset -7px -7px 0 color-mix(in srgb, var(--cube-color), black 18%), inset 4px 4px 0 #ffffff2b; transform: translate(-50%, -50%) rotateX(10deg) rotateZ(-7deg); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; animation: arrive .35s cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes arrive { from { opacity: 0; translate: 0 8px; scale: .84; } to { opacity: 1; translate: 0 0; scale: 1; } }
+    .empty-state { position: absolute; inset: 40% 14px auto; z-index: 2; color: #91a6b7; text-align: center; font-size: 10px; }
+    .participant-foot { display: flex; justify-content: space-between; padding: 10px 12px; border-top: 1px solid #283646; color: #8da0b1; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .participant-foot b { color: #c7d5df; font-weight: 500; }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; padding: 0 16px 15px; color: #8093a5; font-size: 9px; }
+    .legend span::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 2px; background: var(--blue); vertical-align: 1px; }
+    .legend span:last-child::before { background: var(--green); }
+    .side { display: grid; grid-template-rows: auto minmax(0,1fr); gap: 15px; min-height: 0; }
+    .step-card { padding-bottom: 14px; }
+    .step-body { padding: 15px 16px 0; }
+    .step-number { color: var(--blue); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .06em; }
+    .step-title { margin: 8px 0 5px; font-size: 15px; font-weight: 680; letter-spacing: -.02em; }
+    .step-copy { min-height: 35px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .progress { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 15px 16px 0; }
+    .progress span { height: 3px; border-radius: 4px; background: #2b3947; transition: background .2s ease; }
+    .progress span.done { background: var(--blue); }
+    .progress span.current { background: linear-gradient(90deg, var(--blue), #38505f); }
+    .event-card { min-height: 200px; display: flex; flex-direction: column; }
+    .event-list { display: grid; align-content: start; gap: 0; max-height: 275px; overflow-y: auto; padding: 2px 16px 12px; }
+    .event-row { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #23313e; font-size: 10px; }
+    .event-method { color: var(--blue); font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .event-text { color: #bac8d3; line-height: 1.4; }
+    .event-time { color: #738696; font: 8px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .event-placeholder { padding: 16px 0; color: #8193a4; font-size: 10px; line-height: 1.5; }
+    .footer { display: flex; justify-content: space-between; gap: 18px; margin-top: 16px; color: #718394; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .secondary { border: 0; padding: 0; color: #9ac9d5; background: transparent; font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+    .error { color: var(--red) !important; }
+    .guide-pointer { position: fixed; z-index: 20; left: 0; top: 0; width: 34px; height: 38px; opacity: 0; pointer-events: none; transform: translate(-4px, -5px); transition: left .72s cubic-bezier(.2,.8,.2,1), top .72s cubic-bezier(.2,.8,.2,1), opacity .2s ease; }
+    .guide-pointer.active { opacity: 1; }
+    .guide-pointer svg { position: relative; z-index: 2; width: 25px; height: 31px; overflow: visible; filter: drop-shadow(0 2px 4px #000b); }
+    .pointer-halo { position: absolute; left: 5px; top: 6px; width: 23px; height: 23px; border: 1px solid #8cecff; border-radius: 50%; background: #68d7ee17; opacity: .4; transform: scale(1); box-shadow: 0 0 11px #68d7ee42; }
+    .guide-pointer.clicking .pointer-halo { animation: pointer-pulse .62s ease-out; }
+    @keyframes pointer-pulse { 0% { opacity: .85; transform: scale(.5); } 100% { opacity: 0; transform: scale(1.8); } }
+    @media (max-width: 820px) {
+      .workspace { grid-template-columns: 1fr; }
+      .side { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }
+      .event-card { min-height: 0; }
+    }
+    @media (max-width: 600px) {
+      .shell { width: min(100% - 28px, 540px); padding-top: 15px; }
+      .hero { align-items: stretch; flex-direction: column; gap: 16px; }
+      .run-button { width: 100%; }
+      .room-stage { grid-template-columns: 1fr; }
+      .view { height: 180px; }
+      .side { grid-template-columns: 1fr; }
+      .environment { display: none; }
+      .footer { flex-direction: column; gap: 6px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">S</div>
+        <div><div class="brand-title">Shared AR Workshop</div><div class="brand-subtitle">Collaboration relay · portfolio demo</div></div>
+      </div>
+      <div class="environment"><span class="env-dot"></span>LOCAL LOOPBACK · TEST HARNESS</div>
+    </header>
+
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <div class="eyebrow">Shared state · HTTP long polling</div>
+        <h1 id="page-title">One room. Two clients.</h1>
+        <p class="lead">Follow a real relay round-trip: two participants join, one places a block, the peer receives it, then edits it back.</p>
+      </div>
+      <button class="run-button" id="run" type="button">Run guided relay demo <span aria-hidden="true">→</span></button>
+    </section>
+
+    <aside class="warning" aria-label="Demo scope">
+      <span class="warning-icon" aria-hidden="true">i</span>
+      <div><strong>Relay demonstration only</strong>This browser harness exercises the real Node.js room API. The cube is a UI representation of relay data; it does not run Unity, camera tracking, plane detection, or AR rendering.</div>
+    </aside>
+
+    <section class="workspace" aria-label="Two participant relay demonstration">
+      <section class="card" aria-labelledby="space-title">
+        <div class="card-head">
+          <div class="card-title" id="space-title">Shared room state</div>
+          <div class="room-code" id="room-code">ROOM · —</div>
+        </div>
+        <div class="room-stage">
+          <article class="participant" id="maya-card" aria-label="Participant Maya">
+            <div class="participant-head"><div class="person"><span class="avatar">M</span>Maya</div><span class="connection" id="maya-state">NOT JOINED</span></div>
+            <div class="view" id="maya-view"><span class="view-label">Client A · local view</span><div class="horizon"></div><div class="grid"></div><div class="empty-state">Waiting for a room session</div></div>
+            <div class="participant-foot"><span>Objects <b id="maya-count">0</b></span><span>Sequence <b id="maya-seq">—</b></span></div>
+          </article>
+          <article class="participant" id="noah-card" aria-label="Participant Noah">
+            <div class="participant-head"><div class="person"><span class="avatar">N</span>Noah</div><span class="connection" id="noah-state">NOT JOINED</span></div>
+            <div class="view" id="noah-view"><span class="view-label">Client B · peer view</span><div class="horizon"></div><div class="grid"></div><div class="empty-state">Waiting for a room session</div></div>
+            <div class="participant-foot"><span>Objects <b id="noah-count">0</b></span><span>Sequence <b id="noah-seq">—</b></span></div>
+          </article>
+        </div>
+        <div class="legend"><span>Room snapshot / event update</span><span>Both clients converge on the same block</span></div>
+      </section>
+
+      <div class="side">
+        <section class="card step-card" aria-labelledby="step-heading">
+          <div class="card-head"><div class="card-title">Guided flow</div><div class="connection" id="flow-state">READY</div></div>
+          <div class="step-body" aria-live="polite">
+            <div class="step-number" id="step-number">STEP 0 / 5</div>
+            <h2 class="step-title" id="step-heading">Ready to start</h2>
+            <p class="step-copy" id="step-copy">The demo will use a fresh, temporary room on this machine.</p>
+          </div>
+          <div class="progress" aria-label="Demo progress"><span></span><span></span><span></span><span></span><span></span></div>
+        </section>
+        <section class="card event-card" aria-labelledby="events-title">
+          <div class="card-head"><div class="card-title" id="events-title">Relay activity</div><div class="connection">HTTP · LOOPBACK</div></div>
+          <div class="event-list" id="event-list" aria-live="polite"><div class="event-placeholder">No requests yet. Start the guided flow to inspect real API responses and sequence numbers.</div></div>
+        </section>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>In-memory demo · stopping the host clears all room data</span>
+      <button class="secondary" id="run-again" type="button" hidden>Run again</button>
+    </footer>
+  </main>
+  <div class="guide-pointer" id="guide-pointer" aria-hidden="true"><span class="pointer-halo"></span><svg viewBox="0 0 25 31"><path d="M2 1.5v24l6.8-6.2 4.3 9.1 4.8-2.2-4.5-9.1 9.4-.7L2 1.5Z" fill="#f6fcff" stroke="#10212a" stroke-width="1.6" stroke-linejoin="round"/><path d="M4.2 5.5v15.2l4.9-4.3 4.1 8.6 2.1-1-4.3-8.8 6.5-.4L4.2 5.5Z" fill="#63cde7"/></svg></div>
+  <script>
+    const colors = ['#83d9ee', '#87dfa9', '#ffd078', '#c49cff', '#ff9d8f', '#82a8ff'];
+    const clients = {
+      Maya: { card: document.getElementById('maya-card'), view: document.getElementById('maya-view'), state: 'maya-state', count: 'maya-count', seq: 'maya-seq', objects: new Map(), session: null },
+      Noah: { card: document.getElementById('noah-card'), view: document.getElementById('noah-view'), state: 'noah-state', count: 'noah-count', seq: 'noah-seq', objects: new Map(), session: null },
+    };
+    const runButton = document.querySelector('#run');
+    const eventList = document.querySelector('#event-list');
+    let stepIndex = 0;
+    let busy = false;
+
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const pointer = document.querySelector('#guide-pointer');
+    function aimAt(selector, x = 0.5, y = 0.5) {
+      const target = document.querySelector(selector);
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      pointer.style.left = `${rect.left + rect.width * x}px`;
+      pointer.style.top = `${rect.top + rect.height * y}px`;
+      pointer.classList.add('active');
+    }
+    async function pulsePointer() {
+      pointer.classList.remove('clicking');
+      void pointer.offsetWidth;
+      pointer.classList.add('clicking');
+      await sleep(420);
+      pointer.classList.remove('clicking');
+    }
+    const setStep = (title, copy) => {
+      stepIndex += 1;
+      document.querySelector('#step-number').textContent = `STEP ${stepIndex} / 5`;
+      document.querySelector('#step-heading').textContent = title;
+      document.querySelector('#step-copy').textContent = copy;
+      document.querySelector('#flow-state').textContent = 'IN PROGRESS';
+      document.querySelectorAll('.progress span').forEach((bar, i) => {
+        bar.classList.toggle('done', i < stepIndex - 1);
+        bar.classList.toggle('current', i === stepIndex - 1);
+      });
+    };
+    const logEvent = (method, text, ms, status = 'ok') => {
+      if (eventList.querySelector('.event-placeholder')) eventList.replaceChildren();
+      const row = document.createElement('div');
+      row.className = 'event-row';
+      const methodNode = document.createElement('span');
+      methodNode.className = 'event-method';
+      methodNode.textContent = method;
+      const textNode = document.createElement('span');
+      textNode.className = `event-text${status === 'error' ? ' error' : ''}`;
+      textNode.textContent = text;
+      const timeNode = document.createElement('span');
+      timeNode.className = 'event-time';
+      timeNode.textContent = `${Math.round(ms)} ms`;
+      row.append(methodNode, textNode, timeNode);
+      eventList.prepend(row);
+    };
+    async function api(path, options = {}) {
+      const started = performance.now();
+      const response = await fetch(path, { ...options, cache: 'no-store' });
+      const ms = performance.now() - started;
+      let body;
+      try { body = await response.json(); } catch { body = {}; }
+      return { response, body, ms };
+    }
+    function setClientState(name, text, connected = false) {
+      const client = clients[name];
+      document.getElementById(client.state).textContent = text;
+      document.getElementById(client.state).style.color = connected ? 'var(--green)' : 'var(--muted)';
+      client.card.classList.toggle('synced', connected);
+    }
+    function drawClient(name) {
+      const client = clients[name];
+      client.view.querySelectorAll('.cube, .empty-state').forEach((node) => node.remove());
+      const entries = [...client.objects.values()];
+      if (!entries.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = client.session ? 'Room is empty' : 'Waiting for a room session';
+        client.view.append(empty);
+      }
+      entries.forEach((object, index) => {
+        const cube = document.createElement('div');
+        cube.className = 'cube';
+        cube.textContent = object.id;
+        cube.style.setProperty('--cube-color', colors[object.colorIndex] || colors[0]);
+        const left = Math.max(18, Math.min(82, 50 + object.position.x * 22));
+        const top = Math.max(26, Math.min(72, 57 - object.position.y * 8 - object.position.z * 16));
+        cube.style.left = `${left + index * 7}%`;
+        cube.style.top = `${top}%`;
+        cube.title = `Block ${object.id}; relay position ${object.position.x}, ${object.position.y}, ${object.position.z}`;
+        client.view.append(cube);
+      });
+      document.getElementById(client.count).textContent = String(client.objects.size);
+      document.getElementById(client.seq).textContent = client.session ? String(client.session.sequence) : '—';
+    }
+    function applyEvent(name, event) {
+      const client = clients[name];
+      if (event.kind === 'upsert' && event.object) client.objects.set(event.object.id, event.object);
+      if (event.kind === 'delete' && event.objectId) client.objects.delete(event.objectId);
+      client.session.sequence = Math.max(client.session.sequence, event.sequence || 0);
+      drawClient(name);
+    }
+    function sameRoomState(left, right) {
+      if (left.size !== right.size) return 'object-count mismatch';
+      for (const [id, a] of left) {
+        const b = right.get(id);
+        if (!b) return `missing object ${id}`;
+        if (a.ownerClientId !== b.ownerClientId) return 'owner mismatch';
+        if (a.colorIndex !== b.colorIndex) return 'color mismatch';
+        if (a.physicsEnabled !== b.physicsEnabled) return 'physics flag mismatch';
+        for (const axis of ['x', 'y', 'z']) {
+          if (Math.abs(a.position[axis] - b.position[axis]) > 1e-5) return `position mismatch (${axis})`;
+        }
+        for (const axis of ['x', 'y', 'z', 'w']) {
+          if (Math.abs(a.rotation[axis] - b.rotation[axis]) > 1e-5) return `rotation mismatch (${axis})`;
+        }
+      }
+      return null;
+    }
+    async function join(name, roomCode) {
+      const result = await api(`/api/rooms/${roomCode}/join`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ displayName: name }),
+      });
+      if (!result.response.ok) throw new Error(`Join failed: ${result.body.error || result.response.status}`);
+      clients[name].session = { ...result.body };
+      clients[name].objects = new Map(result.body.objects.map((object) => [object.id, object]));
+      setClientState(name, 'CONNECTED', true);
+      drawClient(name);
+      logEvent('POST', `${name} joined · snapshot ${result.body.objects.length} objects`, result.ms);
+      return result.body;
+    }
+    async function publish(name, object) {
+      const client = clients[name];
+      const result = await api(`/api/rooms/${client.session.roomCode}/objects/upsert`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${client.session.accessToken}` },
+        body: JSON.stringify({ object }),
+      });
+      if (!result.response.ok) throw new Error(`Object update failed: ${result.body.error || result.response.status}`);
+      client.session.sequence = result.body.sequence;
+      client.objects.set(object.id, { ...object, ownerClientId: client.session.clientId });
+      drawClient(name);
+      logEvent('POST', `${name} upserted ${object.id} · seq ${result.body.sequence}`, result.ms);
+      return result.body.sequence;
+    }
+    async function receive(name) {
+      const client = clients[name];
+      const result = await api(`/api/rooms/${client.session.roomCode}/events?since=${client.session.sequence}`, {
+        headers: { authorization: `Bearer ${client.session.accessToken}` },
+      });
+      if (!result.response.ok) throw new Error(`Event poll failed: ${result.body.error || result.response.status}`);
+      result.body.events.forEach((event) => applyEvent(name, event));
+      if (result.body.resyncRequired) {
+        client.objects = new Map(result.body.objects.map((object) => [object.id, object]));
+        client.session.sequence = result.body.sequence;
+        drawClient(name);
+      } else {
+        client.session.sequence = Math.max(client.session.sequence, result.body.sequence || 0);
+      }
+      setClientState(name, 'UPDATED', true);
+      drawClient(name);
+      logEvent('POLL', `${name} received ${result.body.events.length} event(s) · seq ${client.session.sequence}`, result.ms);
+      return result.body;
+    }
+    function fail(error) {
+      document.querySelector('#flow-state').textContent = 'FAILED';
+      document.querySelector('#flow-state').classList.add('error');
+      document.querySelector('#step-heading').textContent = 'Relay demo stopped';
+      document.querySelector('#step-copy').textContent = error.message;
+      logEvent('ERROR', error.message, 0, 'error');
+      document.querySelector('#run-again').hidden = false;
+    }
+    async function runDemo() {
+      if (busy) return;
+      busy = true;
+      runButton.disabled = true;
+      runButton.textContent = 'Running relay demo…';
+      document.querySelector('#run-again').hidden = true;
+      document.querySelector('#flow-state').classList.remove('error');
+      eventList.replaceChildren();
+      stepIndex = 0;
+      Object.values(clients).forEach((client) => {
+        client.objects.clear(); client.session = null; drawClient(Object.keys(clients).find((name) => clients[name] === client));
+      });
+      setClientState('Maya', 'NOT JOINED'); setClientState('Noah', 'NOT JOINED');
+      document.querySelector('#room-code').textContent = 'ROOM · —';
+      try {
+        setStep('Check the local relay', 'A health request confirms the API process is available before a room is created.');
+        const health = await api('/health');
+        if (!health.response.ok || health.body.status !== 'ok') throw new Error('Local relay health check failed.');
+        logEvent('GET', 'Relay health is OK', health.ms);
+        aimAt('#event-list', 0.5, 0.45);
+        await sleep(1400);
+
+        setStep('Join the same room', 'Two independent bearer tokens join a fresh room and receive separate snapshots.');
+        const suffix = crypto.getRandomValues(new Uint32Array(1))[0].toString(36).toUpperCase().padStart(6, '0').slice(-6);
+        const roomCode = `AR${suffix}`;
+        document.querySelector('#room-code').textContent = `ROOM · ${roomCode}`;
+        aimAt('#room-code', 0.6, 0.7);
+        await pulsePointer();
+        await join('Maya', roomCode);
+        await sleep(350);
+        await join('Noah', roomCode);
+        aimAt('#noah-card', 0.55, 0.35);
+        await sleep(1400);
+
+        setStep('Place a block from Maya', 'The first participant sends one validated object through POST /objects/upsert.');
+        aimAt('#maya-view', 0.52, 0.56);
+        await pulsePointer();
+        await publish('Maya', {
+          id: 'block-01', position: { x: -0.8, y: 1.15, z: 0.2 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 }, colorIndex: 2, physicsEnabled: false,
+        });
+        await sleep(1400);
+
+        setStep('Deliver the event to Noah', 'Noah requests events after its cursor; the server returns the actual block update.');
+        aimAt('#event-list', 0.46, 0.52);
+        await pulsePointer();
+        await receive('Noah');
+        aimAt('#noah-view', 0.58, 0.55);
+        await sleep(1400);
+
+        setStep('Edit from the peer and converge', 'Noah changes the same block; Maya receives sequence 2 and both views match.');
+        aimAt('#noah-view', 0.52, 0.56);
+        await pulsePointer();
+        await publish('Noah', {
+          id: 'block-01', position: { x: 0.65, y: 1.4, z: -0.35 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 }, colorIndex: 3, physicsEnabled: false,
+        });
+        await sleep(1400);
+        aimAt('#maya-view', 0.54, 0.55);
+        await pulsePointer();
+        await receive('Maya');
+        const mismatch = sameRoomState(clients.Maya.objects, clients.Noah.objects);
+        if (mismatch || clients.Maya.session.sequence !== clients.Noah.session.sequence) {
+          throw new Error(`The two client views did not converge to the same relay state${mismatch ? ` (${mismatch})` : ' (sequence mismatch)'}.`);
+        }
+        setClientState('Maya', 'IN SYNC', true); setClientState('Noah', 'IN SYNC', true);
+        document.querySelector('#step-heading').textContent = 'Shared state confirmed';
+        document.querySelector('#step-copy').textContent = 'Both independent clients now show the same block data at relay sequence 2.';
+        document.querySelector('#flow-state').textContent = 'SYNCED';
+        document.querySelector('#run-again').hidden = false;
+      } catch (error) {
+        fail(error instanceof Error ? error : new Error('Unexpected demo failure.'));
+      } finally {
+        busy = false;
+        runButton.disabled = false;
+        runButton.innerHTML = 'Run guided relay demo <span aria-hidden="true">→</span>';
+      }
+    }
+    runButton.addEventListener('click', runDemo);
+    document.querySelector('#run-again').addEventListener('click', runDemo);
+    drawClient('Maya'); drawClient('Noah');
+  </script>
+</body>
+</html>
